@@ -387,3 +387,50 @@ pub fn every_nth_col(n: usize) -> Grid {
 
     grid
 }
+
+pub fn fill_row(row: usize, width: usize, from_right: bool) -> Grid {
+    let mut grid = Grid::default();
+    
+    if row >= HEIGHT {
+        return grid;
+    }
+    
+    if from_right {
+        let start = if width > WIDTH { 0 } else { WIDTH - width };
+        for x in start..WIDTH {
+            grid.0[x][row] = 0xFF;
+        }
+    } else {
+        let end = core::cmp::min(width, WIDTH);
+        for x in 0..end {
+            grid.0[x][row] = 0xFF;
+        }
+    }
+    
+    grid
+}
+
+pub fn fill_rows(widths: &[u8; HEIGHT], from_right: bool) -> Grid {
+    let mut grid = Grid::default();
+    
+    for row in 0..HEIGHT {
+        let width = widths[row] as usize;
+        if width == 0 {
+            continue;
+        }
+        
+        if from_right {
+            let start = if width > WIDTH { 0 } else { WIDTH - width };
+            for x in start..WIDTH {
+                grid.0[x][row] = 0xFF;
+            }
+        } else {
+            let end = core::cmp::min(width, WIDTH);
+            for x in 0..end {
+                grid.0[x][row] = 0xFF;
+            }
+        }
+    }
+    
+    grid
+}

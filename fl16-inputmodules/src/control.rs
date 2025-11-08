@@ -71,6 +71,7 @@ pub enum CommandVals {
     PwmFreq = 0x1E,
     DebugMode = 0x1F,
     Version = 0x20,
+    FillRows = 0x22,
 }
 
 #[derive(num_derive::FromPrimitive)]
@@ -211,6 +212,8 @@ pub enum Command {
     GetPwmFreq,
     SetDebugMode(bool),
     GetDebugMode,
+    #[cfg(feature = "ledmatrix")]
+    FillRows([u8; HEIGHT], bool),
     _Unknown,
 }
 
@@ -348,6 +351,19 @@ pub fn parse_module_command(count: usize, buf: &[u8]) -> Option<Command> {
                 }
             }
             Some(CommandVals::DrawGreyColBuffer) => Some(Command::DrawGreyColBuffer),
+            Some(CommandVals::FillRows) => {
+                // 3 bytes for magic + command
+                // 34 bytes for row widths (0-9 each)
+                // 1 byte for direction (0=left, 1=right)
+                if count >= 3 + HEIGHT + 1 {
+                    let mut widths = [0u8; HEIGHT];
+                    widths.copy_from_slice(&buf[3..(3 + HEIGHT)]);
+                    let from_right = buf[3 + HEIGHT] == 1;
+                    Some(Command::FillRows(widths, from_right))
+                } else {
+                    None
+                }
+            }
             Some(CommandVals::StartGame) => match arg.and_then(FromPrimitive::from_u8) {
                 Some(GameVal::Snake) => Some(Command::StartGame(Game::Snake)),
                 Some(GameVal::Pong) => Some(Command::StartGame(Game::Pong)),
@@ -575,6 +591,10 @@ pub fn handle_command(
             state.grid = state.col_buffer.clone();
             // Zero the old staging buffer, just for good measure.
             state.col_buffer = percentage(0);
+            None
+        }
+        Command::FillRows(widths, from_right) => {
+            state.grid = fill_rows(widths, *from_right);
             None
         }
         // TODO: Move to handle_generic_command
